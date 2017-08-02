@@ -3,9 +3,9 @@ package editor;
 import javafx.application.Application;
 import javafx.event.EventHandler;
 import javafx.geometry.VPos;
+import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.geometry.Orientation;
-
 import javafx.scene.control.ScrollBar;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
@@ -46,30 +46,67 @@ public class Editor extends Application {
             root.getChildren().add(displayText);
 
         }
+        public void handle(KeyEvent keyEvent) {
+            if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
+
+                String characterTyped = keyEvent.getCharacter();
+
+                if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8) {
+
+                    displayText.setText(characterTyped);
+
+                    keyEvent.consume();
+                }
+                centerText();
+            }
 
 
+            else if (keyEvent.getEventType() == KeyEvent.KEY_PRESSED) {
+                // Arrow keys should be processed using the KEY_PRESSED event, because KEY_PRESSED
+                // events have a code that we can check (KEY_TYPED events don't have an associated
+                // KeyCode).
+                KeyCode code = keyEvent.getCode();
+                if (code == KeyCode.UP) {
+                    fontSize += 5;
+                    displayText.setFont(Font.font(fontName, fontSize));
+                    centerText();
+                } else if (code == KeyCode.DOWN) {
+                    fontSize = Math.max(0, fontSize - 5);
+                    displayText.setFont(Font.font(fontName, fontSize));
+                    centerText();
+                }
+            }
+        }
 
+        private void centerText() {
+            // Figure out the size of the current text.
+            double textHeight = displayText.getLayoutBounds().getHeight();
+            double textWidth = displayText.getLayoutBounds().getWidth();
+
+            // Calculate the position so that the text will be centered on the screen.
+            double textTop = textCenterY - textHeight / 2;
+            double textLeft = textCenterX - textWidth / 2;
+
+            // Re-position the text.
+            displayText.setX(textLeft);
+            displayText.setY(textTop);
+
+            // Make sure the text appears in front of any other objects you might add.
+            displayText.toFront();
+        }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     @Override
     public void start(Stage stage) {
         Group root = new Group();
 
         Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT, Color.WHITE);
+
+        EventHandler<KeyEvent> keyEventHandler =
+                new KeyEventHandler(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+        scene.setOnKeyTyped(keyEventHandler);
+        scene.setOnKeyPressed(keyEventHandler);
 
 
         ScrollBar scrollBar = new ScrollBar();
@@ -81,6 +118,7 @@ public class Editor extends Application {
         double usableScreenWidth = WINDOW_WIDTH - scrollBar.getLayoutBounds().getWidth();
         scrollBar.setLayoutX(usableScreenWidth);
 
+        stage.setTitle("Single Letter Display Simple");
         stage.setScene(scene);
         stage.show();
     }

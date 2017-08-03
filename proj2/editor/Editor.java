@@ -19,6 +19,7 @@ import javafx.stage.Stage;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.util.Duration;
+import java.util.LinkedList;
 
 
 public class Editor extends Application {
@@ -39,6 +40,8 @@ public class Editor extends Application {
 
         int textCenterX;
         int textCenterY;
+        private LinkedList<Character> list = new LinkedList<>();
+        private String txt;
 
         private static final int STARTING_FONT_SIZE = 12;
         private static final int STARTING_TEXT_POSITION_X = 0;
@@ -50,11 +53,12 @@ public class Editor extends Application {
         private String fontName = "Verdana";
 
 
+
         KeyEventHandler(final Group root, int windowWidth, int windowHeight) {
             textCenterX = windowWidth / 2;
             textCenterY = windowHeight / 2;
 
-            displayText = new Text(textCenterX, textCenterY, "");
+            displayText = new Text(0, 0, "");
 
             displayText.setTextOrigin(VPos.TOP);
             displayText.setFont(Font.font(fontName, fontSize));
@@ -63,14 +67,18 @@ public class Editor extends Application {
 
         }
         public void handle(KeyEvent keyEvent) {
+
+
             if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
+
 
                 String characterTyped = keyEvent.getCharacter();
 
                 if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8) {
 
-                    displayText.setText(characterTyped);
-
+                    list.add(characterTyped.charAt(0));
+                    txt=getText(list);
+                    displayText.setText(txt);
                     keyEvent.consume();
                 }
                 centerText();
@@ -94,6 +102,15 @@ public class Editor extends Application {
             }
         }
 
+        private String getText(LinkedList<Character> l){
+            String res="";
+            for(int i=0;i<l.size();i++){
+                res=res+l.get(i);
+            }
+            return res;
+        }
+
+
         private void centerText() {
             // Figure out the size of the current text.
             double textHeight = displayText.getLayoutBounds().getHeight();
@@ -104,15 +121,15 @@ public class Editor extends Application {
             double textLeft = textCenterX - textWidth / 2;
 
             // Re-position the text.
-            displayText.setX(textLeft);
-            displayText.setY(textTop);
+            displayText.setX(5);
+            displayText.setY(0);
 
 
             textBoundingBox.setHeight(textHeight);
             textBoundingBox.setWidth(1);
 
-            textBoundingBox.setX(textWidth);
-            textBoundingBox.setY(textTop);
+            textBoundingBox.setX(textWidth+5);
+            textBoundingBox.setY(0);
 
 
 
@@ -170,7 +187,7 @@ public class Editor extends Application {
         }
 
     }
-    
+
 
     @Override
     public void start(Stage stage) {

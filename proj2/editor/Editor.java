@@ -32,7 +32,7 @@ public class Editor extends Application {
 
     public Editor() {
 
-        textBoundingBox = new Rectangle(0, 0);
+        textBoundingBox = new Rectangle(1, 12);
     }
 
 
@@ -40,7 +40,7 @@ public class Editor extends Application {
 
         int textCenterX;
         int textCenterY;
-        private LinkedList<Character> list = new LinkedList<>();
+        private LinkedList<String> list = new LinkedList<>();
         private String txt;
 
         private static final int STARTING_FONT_SIZE = 12;
@@ -68,15 +68,10 @@ public class Editor extends Application {
         }
         public void handle(KeyEvent keyEvent) {
 
-
             if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
-
-
                 String characterTyped = keyEvent.getCharacter();
-
                 if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8) {
-
-                    list.add(characterTyped.charAt(0));
+                    list.addLast(characterTyped);
                     txt=getText(list);
                     displayText.setText(txt);
                     keyEvent.consume();
@@ -98,15 +93,25 @@ public class Editor extends Application {
                     fontSize = Math.max(0, fontSize - 5);
                     displayText.setFont(Font.font(fontName, fontSize));
                     centerText();
+                } else if (code == KeyCode.ENTER){
+                    displayText.setText("/n");
+                    centerText();
+                } else if (code == KeyCode.BACK_SPACE){
+                    list.removeLast();
+                    txt=getText(list);
+                    displayText.setText(txt);
+                    centerText();
                 }
             }
         }
 
-        private String getText(LinkedList<Character> l){
+        private String getText(LinkedList<String> l){
             String res="";
-            for(int i=0;i<l.size();i++){
-                res=res+l.get(i);
+
+            for(int i=0;i<l.size();i++) {
+                res = res + l.get(i);
             }
+
             return res;
         }
 
@@ -124,14 +129,8 @@ public class Editor extends Application {
             displayText.setX(5);
             displayText.setY(0);
 
-
-            textBoundingBox.setHeight(textHeight);
-            textBoundingBox.setWidth(1);
-
             textBoundingBox.setX(textWidth+5);
             textBoundingBox.setY(0);
-
-
 
 
             // Make sure the text appears in front of any other objects you might add.

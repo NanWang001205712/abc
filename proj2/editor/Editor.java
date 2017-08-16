@@ -24,36 +24,33 @@ import java.util.LinkedList;
 public class Editor extends Application {
 
     private final Rectangle textBoundingBox;
-    private static final String MESSAGE_PREFIX ="command";
+    private static final String MESSAGE_PREFIX = "command";
     private static final int WINDOW_WIDTH = 500;
     private static final int WINDOW_HEIGHT = 500;
     private static final int STARTING_FONT_SIZE = 12;
     private static final int STARTING_TEXT_POSITION_X = 5;
     private static final int STARTING_TEXT_POSITION_Y = 0;
     private Text displayText = new Text(STARTING_TEXT_POSITION_X, STARTING_TEXT_POSITION_Y, "");
-    int textCenterX;
-    int textCenterY;
+
     double cursorX;
     double cursorY;
 
     public Editor() {
-        textBoundingBox = new Rectangle(1, 12);
+        textBoundingBox = new Rectangle(1, STARTING_FONT_SIZE);
     }
 
-    private class KeyEventHandler implements EventHandler<KeyEvent>{
+    private class KeyEventHandler implements EventHandler<KeyEvent> {
         private LinkedList<Character> list = new LinkedList<>();
         private String txt;
-        private int cursorPos=0;
+        private int cursorPos = 0;
 
         private int fontSize = STARTING_FONT_SIZE;
         private String fontName = "Verdana";
-        public int line=1;
+        public int line = 1;
 
         KeyEventHandler(final Group root, int windowWidth, int windowHeight) {
-            textCenterX = 5;
-            textCenterY = 5;
-            cursorX=0;
-            cursorY=(line-1)*1.22*fontSize;
+            cursorX = 0;
+            cursorY = (line - 1) * 1.22 * fontSize;
             displayText.setTextOrigin(VPos.TOP);
             displayText.setFont(Font.font(fontName, fontSize));
             textBoundingBox.setX(cursorX);
@@ -61,6 +58,7 @@ public class Editor extends Application {
             root.getChildren().add(displayText);
             root.getChildren().add(textBoundingBox);
         }
+
         public void handle(KeyEvent keyEvent) {
             if (keyEvent.isShortcutDown()) {
                 if (keyEvent.getCode() == KeyCode.A) {
@@ -68,19 +66,18 @@ public class Editor extends Application {
                 } else if (keyEvent.getCode() == KeyCode.Z) {
                     System.out.println(MESSAGE_PREFIX + " in addition to \"z\"");
                 }
-            }
-            else if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
+            } else if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
                 String characterTyped = keyEvent.getCharacter();
                 if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8) {
-                    list.add(cursorPos,characterTyped.charAt(0));
-                    txt=getText(list);
+                    list.add(cursorPos, characterTyped.charAt(0));
+                    txt = getText(list);
                     cursorPos++;
                     displayText.setText(txt);
                     centerText();
                     keyEvent.consume();
                 }
-            }
-            else if (keyEvent.getEventType() == KeyEvent.KEY_PRESSED) {
+
+            } else if (keyEvent.getEventType() == KeyEvent.KEY_PRESSED) {
                 // Arrow keys should be processed using the KEY_PRESSED event, because KEY_PRESSED
                 // events have a code that we can check (KEY_TYPED events don't have an associated
                 // KeyCode).
@@ -93,73 +90,61 @@ public class Editor extends Application {
                     fontSize = Math.max(0, fontSize - 5);
                     displayText.setFont(Font.font(fontName, fontSize));
 
-                } else if (code == KeyCode.BACK_SPACE){
-                    list.removeLast();
-                    txt=getText(list);
-                    displayText.setText(txt);
-                    cursorPos--;
-                    centerText();
+                } else if (code == KeyCode.BACK_SPACE) {
+                    if(list.size()>0) {
+                        list.removeLast();
+                        txt = getText(list);
+                        displayText.setText(txt);
+                        cursorPos--;
+                        centerText();
+                    }
                 }
+
             }
         }
-        private String enterCursor(String t){
-            textCenterY+=1.22*fontSize;
-            t="";
+        private String enterCursor(String t) {
+
+            t = "";
             return t;
         }
-
         private void centerText() {
             // Figure out the size of the current text.
-            String txt="";
-            line=1;
+            String txt = "";
+            line = 1;
             Text txtTemp = new Text("");
             txtTemp.setTextOrigin(VPos.TOP);
             txtTemp.setFont(Font.font(fontName, fontSize));
 
-            for(int i=0; i<cursorPos; i++){
+            for (int i = 0; i < cursorPos; i++) {
                 txt = txt + list.get(i);
-                if(list.get(i)==13){
+                if (list.get(i) == 13) {
                     txt = enterCursor(txt);
                     line++;
-                    cursorY=(line-1)*1.22*fontSize;
+                    cursorY = (line - 1) * 1.22 * fontSize;
                     textBoundingBox.setY(cursorY);
                 }
             }
-
             txtTemp.setText(txt);
-
             double textHeight = displayText.getLayoutBounds().getHeight();
             double textWidth = txtTemp.getLayoutBounds().getWidth();
-
-            if (textWidth<=WINDOW_WIDTH){
-                cursorX=5+textWidth;
+            if(textHeight<=1.22*fontSize){
+                cursorY=0;
+                textBoundingBox.setY(cursorY);
+            }
+            if (textWidth <= WINDOW_WIDTH) {
+                cursorX = 5 + textWidth;
                 textBoundingBox.setX(cursorX);
             }
-            if(txtTemp.getLayoutBounds().getWidth()<=5){
-
-                if (displayText.getLayoutBounds().getHeight()<=0){
-                    cursorY=0;
-                    cursorX=5+textWidth;
-                    textBoundingBox.setX(cursorX);
-                    textBoundingBox.setY(cursorY);
-                }
-                else {
-                    line--;
-                    cursorX=5+textWidth;
-                    textBoundingBox.setX(cursorX);
-                    cursorY=(line-1)*1.22*fontSize;
-                    textBoundingBox.setY(cursorY);
-                }
-            }
-
             // Make sure the text appears in front of any other objects you might add.
             displayText.toFront();
         }
     }
+
     private class RectangleBlinkEventHandler implements EventHandler<ActionEvent> {
         private int currentColorIndex = 0;
         private Color[] boxColors =
                 {Color.BLACK, Color.WHITE};
+
         RectangleBlinkEventHandler() {
             // Set the color to be the first color in the list.
             changeColor();
@@ -168,10 +153,12 @@ public class Editor extends Application {
             textBoundingBox.setFill(boxColors[currentColorIndex]);
             currentColorIndex = (currentColorIndex + 1) % boxColors.length;
         }
+
         public void handle(ActionEvent event) {
             changeColor();
         }
     }
+
     public void makeRectangleColorChange() {
 
         final Timeline timeline = new Timeline();
@@ -181,13 +168,16 @@ public class Editor extends Application {
         timeline.getKeyFrames().add(keyFrame);
         timeline.play();
     }
+
     private class MouseClickEventHandler implements EventHandler<MouseEvent> {
         Text positionText;
-        MouseClickEventHandler(Group root){
+
+        MouseClickEventHandler(Group root) {
             positionText = new Text("");
             positionText.setTextOrigin(VPos.BOTTOM);
             root.getChildren().add(positionText);
         }
+
         public void handle(MouseEvent mouseEvent) {
             double mousePressedX = mouseEvent.getX();
             double mousePressedY = mouseEvent.getY();
@@ -196,6 +186,7 @@ public class Editor extends Application {
             positionText.setY(mousePressedY);
         }
     }
+
     @Override
     public void start(Stage stage) {
         Group root = new Group();
@@ -216,13 +207,15 @@ public class Editor extends Application {
         stage.setScene(scene);
         stage.show();
     }
-    private String getText(LinkedList<Character> l){
-        String res="";
-        for(int i=0;i<l.size();i++) {
+
+    private String getText(LinkedList<Character> l) {
+        String res = "";
+        for (int i = 0; i < l.size(); i++) {
             res = res + l.get(i);
         }
         return res;
     }
+
     public static void main(String[] args) {
         launch(args);
     }

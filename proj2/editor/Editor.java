@@ -19,62 +19,80 @@ import javafx.stage.Stage;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.util.Duration;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Iterator;
 
 public class Editor extends Application {
 
-    private final Rectangle textBoundingBox;
     private static final String MESSAGE_PREFIX = "command";
+
+    private static final int STARTING_FONT_SIZE = 12;
+    private static final int STARTING_X = 5;
+    private static final int STARTING_Y = 0;
+    private static final int MARGIN = 19;
     private static final int WINDOW_WIDTH = 500;
     private static final int WINDOW_HEIGHT = 500;
-    private static final int STARTING_FONT_SIZE = 12;
-    private static final int STARTING_TEXT_POSITION_X = 5;
-    private static final int STARTING_TEXT_POSITION_Y = 0;
-    private Text displayText = new Text(STARTING_TEXT_POSITION_X, STARTING_TEXT_POSITION_Y, "");
+    private String fontName = "Verdana";
 
-    double cursorX;
-    double cursorY;
+    private int width;
+    private int height;
+    private int fontSize;
+    private int lineSize;
+
+    private UndoRedo undoredo;
+    private Group textRoot;
+    private Group root;
+    private final Rectangle cursorRectangle;
+
+    private LinkedList<Text> text;
+
 
     public Editor() {
-        textBoundingBox = new Rectangle(1, STARTING_FONT_SIZE);
+        cursorRectangle = new Rectangle(1, STARTING_FONT_SIZE);
+        text = new LinkedList<Text>();
+        width = WINDOW_WIDTH;
+        height = WINDOW_HEIGHT;
+        fontSize = STARTING_FONT_SIZE;
+        lineSize = getLineSize();
     }
 
     private class KeyEventHandler implements EventHandler<KeyEvent> {
-        private LinkedList<Character> list = new LinkedList<>();
-        private String txt;
-        private int cursorPos = 0;
+        KeyEventHandler(Group root){
 
-        private int fontSize = STARTING_FONT_SIZE;
-        private String fontName = "Verdana";
-        public int line = 1;
-
-        KeyEventHandler(final Group root, int windowWidth, int windowHeight) {
-            cursorX = 0;
-            cursorY = (line - 1) * 1.22 * fontSize;
-            displayText.setTextOrigin(VPos.TOP);
-            displayText.setFont(Font.font(fontName, fontSize));
-            textBoundingBox.setX(cursorX);
-            textBoundingBox.setY(cursorY);
-            root.getChildren().add(displayText);
-            root.getChildren().add(textBoundingBox);
         }
-
         public void handle(KeyEvent keyEvent) {
             if (keyEvent.isShortcutDown()) {
                 if (keyEvent.getCode() == KeyCode.A) {
                     System.out.println(MESSAGE_PREFIX + " in addition to \"a\"");
-                } else if (keyEvent.getCode() == KeyCode.Z) {
-                    System.out.println(MESSAGE_PREFIX + " in addition to \"z\"");
+                }
+                else if (keyEvent.getCode() == KeyCode.Z) {
+                    Text temp = undoredo.undo();
+                    if (temp != null) {
+                        temp.setFont(Font.font(fontName, fontSize));
+                    }
+                    updateDisplay();
+
+                } else if (keyEvent.getCode() == KeyCode.Y) {
+                    Text temp = undoredo.redo();
+                    if (temp != null) {
+                        temp.setFont(Font.font(fontName, fontSize));
+                    }
+                    updateDisplay();
                 }
             } else if (keyEvent.getEventType() == KeyEvent.KEY_TYPED) {
                 String characterTyped = keyEvent.getCharacter();
-                if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8) {
-                    list.add(cursorPos, characterTyped.charAt(0));
-                    txt = getText(list);
-                    cursorPos++;
-                    displayText.setText(txt);
-                    centerText();
+                if (characterTyped.length() > 0 && characterTyped.charAt(0) != 8 &&
+                        characterTyped.charAt(0) != 13 && characterTyped.charAt(0) != 127) {
+                    Text t = new Text(0, 0, characterTyped);
+                    t.setTextOrigin(VPos.TOP);
+                    t.setFont(Font.font(fontName, fontSize));
+                    textRoot.getChildren().add(t);
+                    t.toFront();
+                    text.add(t);
+                    undoredo.add(text.cursor.prev, UndoRedo.INSERT, text.cursor);
                     keyEvent.consume();
+                    updateDisplay();
                 }
 
             } else if (keyEvent.getEventType() == KeyEvent.KEY_PRESSED) {
@@ -84,59 +102,130 @@ public class Editor extends Application {
                 KeyCode code = keyEvent.getCode();
                 if (code == KeyCode.UP) {
                     fontSize += 5;
-                    displayText.setFont(Font.font(fontName, fontSize));
-
-                } else if (code == KeyCode.DOWN) {
+                    for (Text t : text) {
+                        t.setFont(Font.font(fontName, fontSize));
+                    }
+                    updateDisplay();
+                } if (code == KeyCode.DOWN) {
                     fontSize = Math.max(0, fontSize - 5);
-                    displayText.setFont(Font.font(fontName, fontSize));
-
-                } else if (code == KeyCode.BACK_SPACE) {
-                    if(list.size()>0) {
-                        list.removeLast();
-                        txt = getText(list);
-                        displayText.setText(txt);
-                        cursorPos--;
-                        centerText();
+                    for (Text t : text) {
+                        t.setFont(Font.font(fontName, fontSize));
+                    }
+                    updateDisplay();
+                } if (code == KeyCode.BACK_SPACE) {
+                    LinkedList.Node tempNode = text.cursor.prev;
+                    Text temp = text.remove();
+                    if (temp != null) {
+                        textRoot.getChildren().remove(temp);
+                        undoredo.add(tempNode, UndoRedo.REMOVE, text.cursor);
+                        updateDisplay();
                     }
                 }
+                if (code == KeyCode.ENTER){
+                    Text t = new Text(0, 0, "\n");
+                    text.add(t);
+                    textRoot.getChildren().add(t);
+                    updateDisplay();
+                }
 
             }
         }
-        private String enterCursor(String t) {
+     }
+    private int getLineSize() {
+        Text temp = new Text(0, 0, " ");
+        temp.setFont(Font.font(fontName, fontSize));
+        return (int) (temp.getLayoutBounds().getHeight() + .5);
+    }
+    private void updateDisplay() {
+        lineSize = getLineSize();
 
-            t = "";
-            return t;
-        }
-        private void centerText() {
-            // Figure out the size of the current text.
-            String txt = "";
-            line = 1;
-            Text txtTemp = new Text("");
-            txtTemp.setTextOrigin(VPos.TOP);
-            txtTemp.setFont(Font.font(fontName, fontSize));
+        Text cursorTextObject = new Text();
 
-            for (int i = 0; i < cursorPos; i++) {
-                txt = txt + list.get(i);
-                if (list.get(i) == 13) {
-                    txt = enterCursor(txt);
-                    line++;
-                    cursorY = (line - 1) * 1.22 * fontSize;
-                    textBoundingBox.setY(cursorY);
+        int currentX = STARTING_X;
+        int currentY = STARTING_Y;
+
+        boolean drawCursorAtEnd = true;
+        boolean currentWordStartsLine = true;
+
+        Iterator<Text> textObjects = text.iterator();
+
+        Text currentText = textObjects.next();
+
+
+
+        ArrayList<Text> currentWordTextBoxes = new ArrayList<>();
+        ArrayList<Integer> currentWordXDisplacements = new ArrayList<>();
+
+        while (currentText != null) {
+            currentText.setX(currentX);
+            currentText.setY(currentY);
+
+
+
+            int characterWidth = (int) (currentText.getLayoutBounds().getWidth() + .5);
+            currentX += characterWidth;
+
+            String currLetter = currentText.getText();
+            if (currLetter.equals(" ") || currLetter.equals("\n")) {
+
+
+                currentWordTextBoxes = new ArrayList<>();
+                currentWordXDisplacements = new ArrayList<>();
+
+                if (currLetter.equals(" ")) {
+                    currentWordStartsLine = false;
+                } else {
+                    currentWordStartsLine = true;
+                    currentX = STARTING_X;
+                    currentY += lineSize;
+                }
+
+            } else {
+                if (currentWordStartsLine) {
+                    if (currentX > width - MARGIN) {
+                        currentX = STARTING_X;
+                        currentY += lineSize;
+                        currentText.setX(currentX);
+                        currentText.setY(currentY);
+
+                        currentX += (int) (currentText.getLayoutBounds().getWidth() + .5);
+                    }
+                } else {
+
+                    currentWordTextBoxes.add(currentText);
+                    currentWordXDisplacements.add(characterWidth);
+                    if (currentX > width - MARGIN) {
+                        currentY += lineSize;
+                        currentX = STARTING_X;
+
+                        currentWordStartsLine = true;
+                        for (int i = 0; i < currentWordTextBoxes.size(); i++) {
+                            currentWordTextBoxes.get(i).setX(currentX);
+                            currentWordTextBoxes.get(i).setY(currentY);
+                            currentX += currentWordXDisplacements.get(i);
+                        }
+                    }
                 }
             }
-            txtTemp.setText(txt);
-            double textHeight = displayText.getLayoutBounds().getHeight();
-            double textWidth = txtTemp.getLayoutBounds().getWidth();
-            if(textHeight<=1.22*fontSize){
-                cursorY=0;
-                textBoundingBox.setY(cursorY);
+
+            if (((LinkedList.LinkedListIterator) textObjects).isNextCursorNode()) {
+                drawCursorAtEnd = false;
+                cursorTextObject = currentText;
             }
-            if (textWidth <= WINDOW_WIDTH) {
-                cursorX = 5 + textWidth;
-                textBoundingBox.setX(cursorX);
-            }
-            // Make sure the text appears in front of any other objects you might add.
-            displayText.toFront();
+
+            currentText = textObjects.next();
+        }
+
+        if (drawCursorAtEnd) {
+            cursorRectangle.setX(Math.min(currentX, width - MARGIN));
+            cursorRectangle.setY(currentY);
+            cursorRectangle.setHeight(lineSize);
+        } else {
+            int xVal = (int) cursorTextObject.getX();
+            xVal = Math.min(xVal, width - MARGIN);
+            cursorRectangle.setX(xVal);
+            cursorRectangle.setY(cursorTextObject.getY());
+            cursorRectangle.setHeight(lineSize);
         }
     }
 
@@ -150,7 +239,7 @@ public class Editor extends Application {
             changeColor();
         }
         private void changeColor() {
-            textBoundingBox.setFill(boxColors[currentColorIndex]);
+            cursorRectangle.setFill(boxColors[currentColorIndex]);
             currentColorIndex = (currentColorIndex + 1) % boxColors.length;
         }
 
@@ -189,16 +278,29 @@ public class Editor extends Application {
 
     @Override
     public void start(Stage stage) {
-        Group root = new Group();
+        root = new Group();
+
+
+        textRoot = new Group();
+        text = new LinkedList<Text>();
+        undoredo = new UndoRedo(text, textRoot);
+
+
         Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT, Color.WHITE);
+
+
         EventHandler<KeyEvent> keyEventHandler =
-                new KeyEventHandler(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+                new KeyEventHandler(root);
         scene.setOnKeyTyped(keyEventHandler);
         scene.setOnKeyPressed(keyEventHandler);
+
+        textRoot.getChildren().add(cursorRectangle);
+
         ScrollBar scrollBar = new ScrollBar();
         scrollBar.setOrientation(Orientation.VERTICAL);
         scrollBar.setPrefHeight(WINDOW_HEIGHT);
         root.getChildren().add(scrollBar);
+        root.getChildren().add(textRoot);
         double usableScreenWidth = WINDOW_WIDTH - scrollBar.getLayoutBounds().getWidth();
         scrollBar.setLayoutX(usableScreenWidth);
         makeRectangleColorChange();
@@ -208,13 +310,6 @@ public class Editor extends Application {
         stage.show();
     }
 
-    private String getText(LinkedList<Character> l) {
-        String res = "";
-        for (int i = 0; i < l.size(); i++) {
-            res = res + l.get(i);
-        }
-        return res;
-    }
 
     public static void main(String[] args) {
         launch(args);
